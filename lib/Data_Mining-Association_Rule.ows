@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme description="" title="" version="2.0">
+	<nodes>
+		<node id="0" name="Data Table" position="(276.0, 28.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table" version="" />
+		<node id="1" name="Datasets" position="(79.0, 94.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owdatasets.OWDataSets" title="FoodMart 2000 Dataset" version="" />
+		<node id="2" name="Association Rules" position="(283.0, 293.0)" project_name="Orange3-Associate" qualified_name="orangecontrib.associate.widgets.owassociate.OWAssociate" title="Association Rules" version="" />
+		<node id="3" name="Frequent Itemsets" position="(279.0, 153.0)" project_name="Orange3-Associate" qualified_name="orangecontrib.associate.widgets.owitemsets.OWItemsets" title="Frequent Itemsets" version="" />
+	</nodes>
+	<links>
+		<link enabled="true" id="0" sink_channel="Data" sink_node_id="0" source_channel="Data" source_node_id="1" />
+		<link enabled="true" id="1" sink_channel="Data" sink_node_id="2" source_channel="Data" source_node_id="1" />
+		<link enabled="true" id="2" sink_channel="Data" sink_node_id="3" source_channel="Data" source_node_id="1" />
+	</links>
+	<annotations />
+	<thumbnail />
+	<node_properties>
+		<properties format="literal" node_id="0">{'auto_commit': True, 'color_by_class': True, 'controlAreaVisible': True, 'dist_color_RGB': (220, 220, 220, 255), 'savedWidgetGeometry': b'\x01\xd9\xd0\xcb\x00\x03\x00\x00\x00\x00\x02\x80\x00\x00\x01\x13\x00\x00\x07\t\x00\x00\x03\xcc\x00\x00\x02\x81\x00\x00\x019\x00\x00\x07\x08\x00\x00\x03\xcb\x00\x00\x00\x00\x00\x00\x00\x00\x07\x80\x00\x00\x02\x81\x00\x00\x019\x00\x00\x07\x08\x00\x00\x03\xcb', 'select_rows': True, 'selected_cols': [], 'selected_rows': [], 'show_attribute_labels': True, 'show_distributions': False, '__version__': 1}</properties>
+		<properties format="literal" node_id="1">{'controlAreaVisible': True, 'header_state': b'\x00\x00\x00\xff\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02]\x00\x00\x00\x07\x01\x01\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00}\xff\xff\xff\xff\x00\x00\x00\x81\x00\x00\x00\x00\x00\x00\x00\x07\x00\x00\x001\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x7f\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00K\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00K\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00K\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00K\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x81\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\xe8\x00\x00\x00\x00K', 'savedWidgetGeometry': b'\x01\xd9\xd0\xcb\x00\x03\x00\x00\x00\x00\x02\x80\x00\x00\x01\x13\x00\x00\x05\x01\x00\x00\x03\x19\x00\x00\x02\x81\x00\x00\x019\x00\x00\x05\x00\x00\x00\x03\x18\x00\x00\x00\x00\x00\x00\x00\x00\x07\x80\x00\x00\x02\x81\x00\x00\x019\x00\x00\x05\x00\x00\x00\x03\x18', 'selected_id': 'core\\foodmart.basket', 'splitter_state': b'\x00\x00\x00\xff\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x01,\x00\x00\x00\xc8\x01\xff\xff\xff\xff\x01\x00\x00\x00\x02\x00', '__version__': 1}</properties>
+		<properties format="literal" node_id="2">{'autoFind': False, 'autoSend': True, 'classify': False, 'controlAreaVisible': True, 'filterAntecedentMax': 1000, 'filterAntecedentMin': 1, 'filterConsequentMax': 1000, 'filterConsequentMin': 1, 'filterKeywordsAntecedent': '', 'filterKeywordsConsequent': '', 'filterSearch': True, 'maxRules': 10000, 'minConfidence': 9, 'minSupport': 1, 'savedWidgetGeometry': b'\x01\xd9\xd0\xcb\x00\x03\x00\x00\x00\x00\x02\x80\x00\x00\x00\xc1\x00\x00\x07[\x00\x00\x03\xaf\x00\x00\x02\x81\x00\x00\x00\xe7\x00\x00\x07Z\x00\x00\x03\xae\x00\x00\x00\x00\x00\x00\x00\x00\x07\x80\x00\x00\x02\x81\x00\x00\x00\xe7\x00\x00\x07Z\x00\x00\x03\xae', '__version__': 1}</properties>
+		<properties format="literal" node_id="3">{'autoFind': False, 'autoSend': True, 'controlAreaVisible': True, 'filterKeywords': '', 'filterMaxItems': 10000, 'filterMinItems': 1, 'filterSearch': True, 'maxItemsets': 10000, 'minSupport': 0.01, 'savedWidgetGeometry': b'\x01\xd9\xd0\xcb\x00\x03\x00\x00\xff\xff\xff\xff\xff\xff\xff\xf7\x00\x00\x07\x80\x00\x00\x04\x06\x00\x00\x02\x81\x00\x00\x019\x00\x00\x06^\x00\x00\x03\xb4\x00\x00\x00\x00\x02\x00\x00\x00\x07\x80\x00\x00\x00\x00\x00\x00\x00\x1d\x00\x00\x07\x7f\x00\x00\x04\x05', '__version__': 1}</properties>
+	</node_properties>
+	<session_state>
+		<window_groups />
+	</session_state>
+</scheme>
