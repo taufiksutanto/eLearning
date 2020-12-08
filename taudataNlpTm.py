@@ -13,29 +13,38 @@ https://tau-data.id
 * Materi & codes diberikan "as-is", tanpa warranty. Pengarang tidak bertanggung jawab atas penggunaannya diluar kegiatan resmi yang dilaksanakan pengarang.
 * Dengan menggunakan materi dan codes ini berarti pengguna telah menyetujui PPMC ini.
 """
-
+import warnings; warnings.simplefilter('ignore')
 from nltk.tokenize import TweetTokenizer; Tokenizer = TweetTokenizer(reduce_len=True)
-from tqdm import tqdm, trange
-from sklearn.feature_extraction.text import CountVectorizer
+from tqdm import tqdm#, trange
+#from sklearn.feature_extraction.text import CountVectorizer
 from textblob import TextBlob
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
-from bs4 import BeautifulSoup as bs
-from sklearn.decomposition import LatentDirichletAllocation as LDA
-from scipy import special
+#from bs4 import BeautifulSoup as bs
+#from sklearn.decomposition import LatentDirichletAllocation as LDA
+#from scipy import special
 from collections import Counter
-import re, networkx as nx, matplotlib.pyplot as plt, operator, numpy as np, os
-import json, pandas as pd, itertools, nltk, time
+#import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+import os
+import re
+import itertools
+import nltk
+import pandas as pd
 from nltk.corpus import wordnet as wn
 from nltk.stem import PorterStemmer;ps = PorterStemmer()
 from itertools import chain
 from html import unescape
 from nltk import sent_tokenize
 from unidecode import unidecode
-from datetime import datetime
-from scipy.sparse import csr_matrix
-import warnings; warnings.simplefilter('ignore')
+#from scipy.sparse import csr_matrix
 
+def print_Topics(model, feature_names, Top_Topics, n_top_words):
+    for topic_idx, topic in enumerate(model.components_[:Top_Topics]):
+        print("Topic #%d:" %(topic_idx+1))
+        print(" ".join([feature_names[i]
+                        for i in topic.argsort()[:-n_top_words - 1:-1]]))
 
 def LoadStopWords(lang='en'):
     L = lang.lower().strip()
@@ -230,79 +239,6 @@ def edits2(word):
     "All edits that are two edits away from `word`."
     return (e2 for e1 in edits1(word) for e2 in edits1(e1))
 
-def crawl(topic, N=100, Nbatch=100, fullTalk=False, language ='id', delay=1, maxTry=7):
-    if Nbatch>100:
-        Nbatch=100
-    if N<Nbatch:
-        Nbatch=N
-    elif N>300000:
-        print('Max N = 300,000 ')
-        N, Nbatch = 300000, 100
-    t = Twitter() # language='en','id'
-    i, Tweets, nTry, nTweet = None, [], 0, 0
-    pbar = tqdm(total = N//Nbatch)
-    while nTweet<N and nTry<maxTry:
-        try:
-            TS = t.search(topic, language=language, start=i, count=Nbatch)
-            for tweet in TS:
-                Tweets.append(tweet)
-                i = tweet.id
-                nTweet+=1
-            if len(TS)<Nbatch: # anticipating that the number of tweets < N
-                nTry = maxTry
-            else:
-                nTry = 1
-            time.sleep(delay)
-            pbar.update(len(TS))
-        except:
-            print("..ZzZzZz",end='')
-            nTry+=1
-            time.sleep(60*3)
-    pbar.close()
-    if fullTalk:
-        print('\nMaking sure we get the full tweets, please wait ...')
-        for i, tweet in tqdm(enumerate(Tweets)):
-            try:
-                webPage = URL(tweet.url).download()
-                soup = bs(webPage,'html.parser')
-                full_tweet = soup.find_all('p',class_='TweetTextSize')
-                if fullTalk:
-                    T = []
-                    for talk in full_tweet:
-                        T.append(bs(str(talk),'html.parser').text)
-                    full_tweet = ' \n'.join(T)
-                else:
-                    full_tweet = bs(str(full_tweet[0]),'html.parser').text
-                Tweets[i]['full_text'] = full_tweet
-            except:
-                Tweets[i]['full_text'] = tweet.txt
-            time.sleep(delay)
-    else:
-        for i, tweet in tqdm(enumerate(Tweets)):
-            Tweets[i]['full_text'] = tweet.txt
-    print('Done!... Total terdapat {0} tweet'.format(len(Tweets)))
-    return Tweets
-
-def saveTweets_old(Tweets,file='Tweets.json', plain = False): #in "Json" Format or "txt" in plain type
-    with open(file, 'w') as f:
-        for T in Tweets:
-            if plain:
-                try:
-                    f.write(T['nlp']+'\n')
-                except:
-                    f.write(T['fullTxt']+'\n')
-            else:
-                try:
-                    f.write(json.dumps(T)+'\n')
-                except:
-                    pass
-
-def loadTweets_old(file):
-    f=open(file,encoding='utf-8', errors ='ignore', mode='r');T=f.readlines();f.close()
-    for i,t in enumerate(T):
-        T[i] = json.loads(t.strip())
-    return T
-
 def strip_non_ascii(string,symbols):
     ''' Returns the string without non ASCII characters''' #isascii = lambda s: len(s) == len(s.encode())
     stripped = (c for c in string if 0 < ord(c) < 127 and c not in symbols)
@@ -335,22 +271,6 @@ def fixTags(t):
             t = t.replace('#'+tag, proper_words)
     return t
 
-def we2vsm(model_we, data_we):
-    N = len(data_we)
-    L = model_we.vector_size
-    vsm_we = np.empty([N, L], dtype=np.float64) # inisialisasi matriks
-    for i,d in tqdm(enumerate(data_we)):
-        tmp = np.zeros([1, L], dtype=np.float64)
-        count = 0
-        for t in d:
-            try:
-                tmp += model_we.wv.__getitem__([t])
-                count += 1
-            except:
-                pass
-        if count>0:
-            vsm_we[i] = tmp/count
-    return vsm_we
 
 def cleanTweets(Tweets):
     factory = StopWordRemoverFactory(); stopwords = set(factory.get_stop_words()+['twitter','rt','pic','com','yg','ga','https'])
@@ -373,201 +293,6 @@ def translate(txt,language='en'): # txt is a TextBlob object
         return txt.translate(to=language)
     except:
         return txt
-
-def sentiment_old(Tweets): #need a clean tweets
-    print("Calculating Sentiment and Subjectivity Score: ... ")
-    T = [translate(TextBlob(tweet['cleanTxt'])) for tweet in tqdm(Tweets)]
-    Sen = [tweet.sentiment.polarity for tweet in tqdm(T)]
-    Sub = [float(tweet.sentiment.subjectivity) for tweet in tqdm(T)]
-    Se, Su = [], []
-    for score_se, score_su in zip(Sen,Sub):
-        if score_se>0.1:
-            Se.append('pos')
-        elif score_se<-0.05: #I prefer this
-            Se.append('neg')
-        else:
-            Se.append('net')
-        if score_su>0.5:
-            Su.append('Subjektif')
-        else:
-            Su.append('Objektif')
-    label_se = ['Positif','Negatif', 'Netral']
-    score_se = [len([True for t in Se if t=='pos']),len([True for t in Se if t=='neg']),len([True for t in Se if t=='net'])]
-    label_su = ['Subjektif','Objektif']
-    score_su = [len([True for t in Su if t=='Subjektif']),len([True for t in Su if t=='Objektif'])]
-    PieChart(score_se,label_se); PieChart(score_su,label_su)
-    Sen = [(s,t['fullTxt']) for s,t in zip(Sen,Tweets)]
-    Sen.sort(key=lambda tup: tup[0])
-    Sub = [(s,t['fullTxt']) for s,t in zip(Sub,Tweets)]
-    Sub.sort(key=lambda tup: tup[0])
-    return (Sen, Sub)
-
-def sentiment(D): #need a clean tweets
-    print("Calculating Sentiment and Subjectivity Score: ... ")
-    T = [translate(TextBlob(t)) for t in tqdm(D)]
-    Sen = [tweet.sentiment.polarity for tweet in tqdm(T)]
-    Sub = [float(tweet.sentiment.subjectivity) for tweet in tqdm(T)]
-    Se, Su = [], []
-    for score_se, score_su in zip(Sen,Sub):
-        if score_se>0.0:
-            Se.append('pos')
-        elif score_se<0.0: #I prefer this
-            Se.append('neg')
-        else:
-            Se.append('net')
-        if score_su>0.5:
-            Su.append('Subjektif')
-        else:
-            Su.append('Objektif')
-    label_se = ['Positif','Negatif', 'Netral']
-    score_se = [len([True for t in Se if t=='pos']),len([True for t in Se if t=='neg']),len([True for t in Se if t=='net'])]
-    label_su = ['Subjektif','Objektif']
-    score_su = [len([True for t in Su if t=='Subjektif']),len([True for t in Su if t=='Objektif'])]
-    PieChart(score_se,label_se); PieChart(score_su,label_su)
-    Sen = [(s,t) for s,t in zip(Sen,D)]
-    Sen.sort(key=lambda tup: tup[0])
-    Sub = [(s,t) for s,t in zip(Sub,D)]
-    Sub.sort(key=lambda tup: tup[0])
-    return (Sen, Sub)
-
-def printSA(SA, N = 2, emo = 'positif'):
-    Sen, Sub = SA
-    e = emo.lower().strip()
-    if e=='positif' or e=='positive':
-        tweets = Sen[-N:]
-    elif e=='negatif' or e=='negative':
-        tweets = Sen[:N]
-    elif e=='netral' or e=='neutral':
-        net = [(abs(score),t) for score,t in Sen if abs(score)<0.01]
-        net.sort(key=lambda tup: tup[0])
-        tweets = net[:N]
-    elif e=='subjektif' or e=='subjective':
-        tweets = Sub[-N:]
-    elif e=='objektif' or e=='objective':
-        tweets = Sub[:N]
-    else:
-        print('Wrong function input parameter = "{0}"'.format(emo)); tweets=[]
-    print('"{0}" Tweets = '.format(emo))
-    for t in tweets:
-        print(t)
-
-def wordClouds(Tweets, file = 'wordCloud.png', plain = False, stopwords=None):
-    if plain: # ordinary (large) Text file - String
-        txt = Tweets
-    else:
-        txt = [t['full_text'] for t in Tweets]; txt = ' '.join(txt)
-    wc = WordCloud(background_color="white")#, max_font_size=40
-    wordcloud = wc.generate(txt)
-    plt.figure(num=1, facecolor='w', edgecolor='k') #figsize=(4, 3), dpi=600, #wc.to_file('wordCloud.png')
-    plt.imshow(wordcloud, cmap=plt.cm.jet, interpolation='nearest', aspect='auto'); plt.xticks(()); plt.yticks(())
-    #plt.savefig('wordCloud.png',bbox_inches='tight', pad_inches = 0.1, dpi=300)
-    plt.show()
-
-def PieChart(score,labels):
-    fig1 = plt.figure(); fig1.add_subplot(111)
-    plt.pie(score, labels=labels, autopct='%1.1f%%', startangle=140)
-    plt.axis('equal');plt.show()
-    return None
-
-def drawGraph(G, Label, layOut='spring'):
-    fig3 = plt.figure(); fig3.add_subplot(111)
-    if layOut.lower()=='spring':
-        pos = nx.spring_layout(G)
-    elif layOut.lower()=='circular':
-        pos=nx.circular_layout(G)
-    elif layOut.lower()=='random':
-        pos = nx.random_layout(G)
-    elif layOut.lower()=='shells':
-        shells = [G.core_nodes,sorted(G.major_building_routers, key=lambda n: nx.degree(G.topo, n)) + G.distribution_routers + G.server_nodes,G.hosts + G.minor_building_routers]
-        pos = nx.shell_layout(G, shells)
-    elif layOut.lower()=='spectral':
-        pos=nx.spectral_layout(G)
-    else:
-        print('Graph Type is not available.')
-        return
-    nx.draw_networkx_nodes(G,pos, alpha=0.2,node_color='blue',node_size=600)
-    if Label:
-        nx.draw_networkx_labels(G,pos)
-    nx.draw_networkx_edges(G,pos,width=4)
-    plt.show()
-
-def Graph(Tweets, Label = False, layOut='spring'): # Need the Tweets Before cleaning
-    print("Please wait, building Graph .... ")
-    G=nx.Graph()
-    for tweet in tqdm(Tweets):
-        if tweet['user']['screen_name'] not in G.nodes():
-            G.add_node(tweet['user']['screen_name'])
-        mentionS =  re.findall("@([a-zA-Z0-9]{1,15})", tweet['full_text'])
-        for mention in mentionS:
-            if "." not in mention: #skipping emails
-                usr = mention.replace("@",'').strip()
-                if usr not in G.nodes():
-                    G.add_node(usr)
-                G.add_edge(tweet['user']['screen_name'],usr)
-    Nn, Ne = G.number_of_nodes(), G.number_of_edges()
-    drawGraph(G, Label, layOut)
-    print('Finished. There are %d nodes and %d edges in the Graph.' %(Nn,Ne))
-    return G
-
-def Centrality(G, N=10):
-    phi = 1.618033988749895 # largest eigenvalue of adj matrix
-    ranking = nx.katz_centrality_numpy(G,1/phi)
-    important_nodes = sorted(ranking.items(), key=operator.itemgetter(1))[::-1]#[0:Nimportant]
-    Mstd = 1 # 1 standard Deviation CI
-    data = np.array([n[1] for n in important_nodes])
-    out = len(data[abs(data - np.mean(data)) > Mstd * np.std(data)]) # outlier within m stDev interval
-    if out>N:
-        dnodes = [n[0] for n in important_nodes[:N]]
-        print('Influencial Users: {0}'.format(str(dnodes)))
-    else:
-        dnodes = [n[0] for n in important_nodes[:out]]
-        print('Influencial Users: {0}'.format(str(important_nodes[:out])))
-    Gt = G.subgraph(dnodes)
-    drawGraph(Gt, Label = True)
-    return Gt
-
-def Community(G):
-    part = community.best_partition(G)
-    values = [part.get(node) for node in G.nodes()]
-    mod, k = community.modularity(part,G), len(set(part.values()))
-    print("Number of Communities = %d\nNetwork modularity = %.2f" %(k,mod)) # https://en.wikipedia.org/wiki/Modularity_%28networks%29
-    fig2 = plt.figure(); fig2.add_subplot(111)
-    nx.draw_shell(G, cmap = plt.get_cmap('gist_ncar'), node_color = values, node_size=30, with_labels=False)
-    plt.show
-    return values
-
-def print_Topics(model, feature_names, Top_Topics, n_top_words):
-    for topic_idx, topic in enumerate(model.components_[:Top_Topics]):
-        print("Topic #%d:" %(topic_idx+1))
-        print(" ".join([feature_names[i]
-                        for i in topic.argsort()[:-n_top_words - 1:-1]]))
-
-def getTopics_old(Tweets,n_topics=5, Top_Words=7):
-    Txt = [t['nlp'] for t in Tweets] # cleaned: stopwords, stemming
-    tf_vectorizer = CountVectorizer(strip_accents = 'unicode', token_pattern = r'\b[a-zA-Z]{3,}\b', max_df = 0.95, min_df = 2)
-    dtm_tf = tf_vectorizer.fit_transform(Txt)
-    tf_terms = tf_vectorizer.get_feature_names()
-    lda_tf = LDA(n_components=n_topics, learning_method='online', random_state=0).fit(dtm_tf)
-    vsm_topics = lda_tf.transform(dtm_tf); doc_topic =  [a.argmax()+1 for a in tqdm(vsm_topics)] # topic of docs
-    print('In total there are {0} major topics, distributed as follows'.format(len(set(doc_topic))))
-    fig4 = plt.figure(); fig4.add_subplot(111)
-    plt.hist(np.array(doc_topic), alpha=0.5); plt.show()
-    print('Printing top {0} Topics, with top {1} Words:'.format(n_topics, Top_Words))
-    print_Topics(lda_tf, tf_terms, n_topics, Top_Words)
-    return lda_tf, dtm_tf, tf_vectorizer
-
-def getTopics(Txt,n_topics=5, Top_Words=7):
-    tf_vectorizer = CountVectorizer(strip_accents = 'unicode', token_pattern = r'\b[a-zA-Z]{3,}\b', max_df = 0.95, min_df = 2)
-    dtm_tf = tf_vectorizer.fit_transform(Txt)
-    tf_terms = tf_vectorizer.get_feature_names()
-    lda_tf = LDA(n_components=n_topics, learning_method='online', random_state=0).fit(dtm_tf)
-    vsm_topics = lda_tf.transform(dtm_tf); doc_topic =  [a.argmax()+1 for a in tqdm(vsm_topics)] # topic of docs
-    print('In total there are {0} major topics, distributed as follows'.format(len(set(doc_topic))))
-    fig4 = plt.figure(); fig4.add_subplot(111)
-    plt.hist(np.array(doc_topic), alpha=0.5); plt.show()
-    print('Printing top {0} Topics, with top {1} Words:'.format(n_topics, Top_Words))
-    print_Topics(lda_tf, tf_terms, n_topics, Top_Words)
-    return lda_tf, dtm_tf, tf_vectorizer
 
 def get_nMax(arr, n):
     indices = arr.ravel().argsort()[-n:]
@@ -611,21 +336,6 @@ def lDistance(firstString, secondString):
                 newDistances.append(1 + min((distances[index1], distances[index1+1], newDistances[-1])))
         distances = newDistances
     return distances[-1]
-
-def buildGraph(nodes):
-    "nodes - list of hashables that represents the nodes of the graph"
-    gr = nx.Graph() #initialize an undirected graph
-    gr.add_nodes_from(nodes)
-    nodePairs = list(itertools.combinations(nodes, 2))
-
-    #add edges to the graph (weighted by Levenshtein distance)
-    for pair in nodePairs:
-        firstString = pair[0]
-        secondString = pair[1]
-        levDistance = lDistance(firstString, secondString)
-        gr.add_edge(firstString, secondString, weight=levDistance)
-
-    return gr
 
 def kataKunci(text):
     #tokenize the text using nltk
