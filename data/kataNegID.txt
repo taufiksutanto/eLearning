@@ -3,7 +3,6 @@ adiktif
 adu
 adu domba
 aduh
-ahoker
 aib
 akal bulus
 akting
@@ -233,6 +232,7 @@ biadab
 biang keladi
 biang kerusuhan
 biangnya
+bias
 bicara sembarangan
 bicara terus-terusan
 bimbang

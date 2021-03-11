@@ -511,7 +511,6 @@ punya
 rasa
 rasanya
 rata
-rt
 rupanya
 saat
 saatnya
@@ -525,6 +524,8 @@ sampai
 sampai-sampai
 sampaikan
 sana
+sangat
+sangatlah
 satu
 saya
 sayalah
@@ -680,6 +681,7 @@ tanpa
 tanya
 tanyakan
 tanyanya
+tapi
 tegas
 tegasnya
 telah
@@ -721,6 +723,7 @@ tetapi
 tiap
 tiba
 tiba-tiba
+tidak
 tidakkah
 tidaklah
 tiga
