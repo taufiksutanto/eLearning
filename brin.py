@@ -291,48 +291,48 @@ def cleanTweet(data):
         cleanTweet.append(cleanText(d["tweet"], fix=slangFixId, lan='id', stops = stopId))
     return cleanTweet
 
-def getTopic(df, Top_Words=30, resume_ = True):
+def getTopic(df, Top_Words=30, resume_ = True, k=0):
     data_ta = df #df['clean'].values
     data = [t.split() for t in data_ta]
-    bigram_t = Phrases(data, min_count=2)
-    trigram_t = Phrases(bigram_t[data])
-    for idx, d in enumerate(data):
-        for token in bigram_t[d]:
-            if '_' in token:# Token is a bigram, add to document.
-                data[idx].append(token)
-        for token in trigram_t[d]:
-            if '_' in token:# Token is a bigram, add to document.
-                data[idx].append(token)
-
-    dictionary_t = Dictionary(data)
-    dictionary_t.filter_extremes(no_below=5, no_above=0.90)
-    corpus_t = [dictionary_t.doc2bow(doc) for doc in data]
-    start, step, limit = 2, 1, 5 # Ganti dengan berapa banyak Topic yang ingin di hitung/explore
-    coh_t, kCV = [], 3 # hati-hati sangat lambat karena cross validation pada metode yang memang tidak efisien (LDA)
-
-    for i in tqdm(range(kCV)):
-        if resume_:
-            try:
-                f = open('data/kCV_{}.pckl'.format(i), 'rb')
-                c = pickle.load(f); f.close()
-                coh_t.append(c)
-            except:
+    
+    if k==0:
+        bigram_t = Phrases(data, min_count=2)
+        trigram_t = Phrases(bigram_t[data])
+        for idx, d in enumerate(data):
+            for token in bigram_t[d]:
+                if '_' in token:# Token is a bigram, add to document.
+                    data[idx].append(token)
+            for token in trigram_t[d]:
+                if '_' in token:# Token is a bigram, add to document.
+                    data[idx].append(token)
+    
+        dictionary_t = Dictionary(data)
+        dictionary_t.filter_extremes(no_below=5, no_above=0.90)
+        corpus_t = [dictionary_t.doc2bow(doc) for doc in data]
+        start, step, limit = 2, 1, 5 # Ganti dengan berapa banyak Topic yang ingin di hitung/explore
+        coh_t, kCV = [], 3 # hati-hati sangat lambat karena cross validation pada metode yang memang tidak efisien (LDA)
+    
+        for i in tqdm(range(kCV)):
+            if resume_:
+                try:
+                    f = open('data/kCV_{}.pckl'.format(i), 'rb')
+                    c = pickle.load(f); f.close()
+                    coh_t.append(c)
+                except:
+                    model_list, c = compute_coherence_values(dictionary=dictionary_t, corpus=corpus_t, texts=data, start=start, limit=limit, step=step)
+                    f = open('data/kCV_{}.pckl'.format(i), 'wb')
+                    pickle.dump(c, f); f.close()
+                    coh_t.append(c)
+            else:
                 model_list, c = compute_coherence_values(dictionary=dictionary_t, corpus=corpus_t, texts=data, start=start, limit=limit, step=step)
                 f = open('data/kCV_{}.pckl'.format(i), 'wb')
                 pickle.dump(c, f); f.close()
                 coh_t.append(c)
-        else:
-            model_list, c = compute_coherence_values(dictionary=dictionary_t, corpus=corpus_t, texts=data, start=start, limit=limit, step=step)
-            f = open('data/kCV_{}.pckl'.format(i), 'wb')
-            pickle.dump(c, f); f.close()
-            coh_t.append(c)
-
-    ct = np.mean(np.array(coh_t), axis=0).tolist()
-    k = ct.index(max(ct))+start
+    
+        ct = np.mean(np.array(coh_t), axis=0).tolist()
+        k = ct.index(max(ct))+start
     tf_w, tm_w, vec_w = getTopics(data_ta, n_topics=k, Top_Words=30)
-    return tf_w, tm_w, vec_w
-
-
+    return tf_w, tm_w, vec_w, ct
 
 ct = CRFTagger()  # Language Model
 fTagger = 'data/all_indo_man_tag_corpus_model.crf.tagger'
