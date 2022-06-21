@@ -21,11 +21,134 @@ from textblob import TextBlob
 from bs4 import BeautifulSoup as bs
 from sklearn.decomposition import LatentDirichletAllocation as LDA
 import re, networkx as nx, matplotlib.pyplot as plt, operator, numpy as np, os, csv, community
-import json, pandas as pd, itertools, time
+import json, pandas as pd, itertools#, time
 from html import unescape
 from nltk import sent_tokenize
 from unidecode import unidecode
-from tqdm import tqdm, trange
+from tqdm import tqdm#, trange
+import json_lines
+import datetime
+import lxml.etree as etree
+
+def load_jsonl(file):
+    tweets = []
+    with open(file, 'rb') as f:
+        for tweet in json_lines.reader(f, broken=True):
+            reduced_tweet = {
+                'created_at': tweet['created_at'],
+                'id': tweet['id_str'],
+                'username': tweet['user']['screen_name'],
+                'user_joined': tweet['user']['created_at'][-4:],
+                'user_id': tweet['user']['id_str'],
+            }
+
+            if 'derived' in tweet['user']:
+                reduced_tweet['country'] = tweet['user']['derived']['locations'][0]['country'] \
+                    if 'locations' in tweet['user']['derived'] else ""
+                reduced_tweet['region'] = tweet['user']['derived']['locations'][0]['region'] \
+                    if 'region' in tweet['user']['derived']['locations'][0] else ""
+
+            if 'retweeted_status' in tweet:
+                reduced_tweet['retweeted_user'] = {
+                    'user_id': tweet['retweeted_status']['user']['id_str'],
+                    'username': tweet['retweeted_status']['user']['screen_name'],
+                    'user_joined': tweet['retweeted_status']['user']['created_at'][-4:]
+                }
+
+            tweets.append(reduced_tweet)
+    return (tweets)
+
+# https://medium.com/@Luca/creating-a-retweet-network-for-gephi-from-a-local-file-with-python-902a96af8e48
+def create_gexf(tweets, filename):
+    attr_qname = etree.QName(
+        "http://www.w3.org/2001/XMLSchema-instance", "schemaLocation")
+
+    gexf = etree.Element('gexf',
+                         {attr_qname: 'http://www.gexf.net/1.3draft  http://www.gexf.net/1.3draft/gexf.xsd'},
+                         nsmap={
+                             None: 'http://graphml.graphdrawing.org/xmlns/graphml'},
+                         version='1.3')
+
+    graph = etree.SubElement(gexf,
+                             'graph',
+                             defaultedgetype='directed',
+                             mode='dynamic',
+                             timeformat='datetime')
+    attributes = etree.SubElement(
+        graph, 'attributes', {'class': 'node', 'mode': 'static'})
+    etree.SubElement(attributes, 'attribute', {
+                     'id': 'country', 'title': 'country', 'type': 'string'})
+    etree.SubElement(attributes, 'attribute', {
+                     'id': 'region', 'title': 'region', 'type': 'string'})
+    etree.SubElement(attributes, 'attribute', {
+                     'id': 'year', 'title': 'year', 'type': 'integer'})
+
+    nodes = etree.SubElement(graph, 'nodes')
+    edges = etree.SubElement(graph, 'edges')
+
+    for tweet in reversed(tweets):
+        node = etree.SubElement(nodes,
+                                'node',
+                                id=tweet['user_id'],
+                                Label=tweet['username'],
+                                start=datetime.datetime.strptime(tweet['created_at'], '%a %b %d %X %z %Y').isoformat(
+                                    timespec='seconds'),  # Fri Jul 27 07:52:57 +0000 2018
+                                end=(datetime.datetime.strptime(
+                                    tweet['created_at'], '%a %b %d %X %z %Y') + datetime.timedelta(seconds=1)).isoformat(timespec='seconds')
+                                )
+        attvalues = etree.SubElement(node, 'attvalues')
+        etree.SubElement(attvalues,
+                         'attvalue',
+                         {'for': 'year',
+                          'value': tweet['user_joined']
+                          }
+                         )
+        if 'region' in tweet:
+            etree.SubElement(attvalues,
+                             'attvalue',
+                             {'for': 'region',
+                              'value': tweet['region']
+                              }
+                             )
+        if 'country' in tweet:
+            etree.SubElement(attvalues,
+                             'attvalue',
+                             {'for': 'country',
+                              'value': tweet['country']
+                              }
+                             )
+        if 'retweeted_user' in tweet:
+            etree.SubElement(edges,
+                             'edge',
+                             {'id': tweet['id'],
+                              'source': tweet['retweeted_user']['user_id'],
+                              'target': tweet['user_id'],
+                              # Fri Jul 27 07:52:57 +0000 2018
+                              'start': datetime.datetime.strptime(tweet['created_at'], '%a %b %d %X %z %Y').isoformat(timespec='seconds'),
+                              'end': (datetime.datetime.strptime(tweet['created_at'], '%a %b %d %X %z %Y') + datetime.timedelta(seconds=1)).isoformat(timespec='seconds')
+                              }
+                             )
+            node = etree.SubElement(nodes,
+                                    'node',
+                                    id=tweet['retweeted_user']['user_id'],
+                                    Label=tweet['retweeted_user']['username'],
+                                    start=datetime.datetime.strptime(tweet['created_at'], '%a %b %d %X %z %Y').isoformat(
+                                        timespec='seconds'),  # Fri Jul 27 07:52:57 +0000 2018
+                                    end=(datetime.datetime.strptime(
+                                        tweet['created_at'], '%a %b %d %X %z %Y') + datetime.timedelta(seconds=1)).isoformat(timespec='seconds')
+                                    )
+            attvalues = etree.SubElement(node, 'attvalues')
+            etree.SubElement(attvalues,
+                             'attvalue',
+                             {'for': 'year',
+                              'value': tweet['retweeted_user']['user_joined']
+                              }
+                             )
+
+    with open(filename, 'w', encoding='utf-8')as f:
+        f.write(etree.tostring(gexf, encoding='utf8',
+                               method='xml').decode('utf-8'))
+    print('Created gexf.')
 
 
 def twitter_html2csv(fData, fHasil):
